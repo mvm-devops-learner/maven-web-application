@@ -1,5 +1,5 @@
 
-node
+node('master')
 {
 	echo "The Node name is : ${env.NODE_NAME} "
     def mavenHome=tool name:"maven3.8.5"
