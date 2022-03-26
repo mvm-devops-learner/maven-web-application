@@ -1,0 +1,69 @@
+pipeline
+ {
+	agent any						//it is master instance
+	
+	tools
+	{
+		maven "maven3.8.4"
+	}
+	options {
+  buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '', numToKeepStr: '5')
+  timestamps()
+}
+triggers {
+  pollSCM '* * * * *'
+  cron '* * * * *'
+}
+
+		
+ stages
+ {
+	// stage to get the code from Github repo
+	stage('CheckoutCode')
+	{
+		steps
+		{
+			git branch: 'development', credentialsId: '8473ea25-caee-4d65-9565-11989734ab87', url: 'https://github.com/mvm-devops-learner/maven-web-application.git'
+		}
+	}
+	
+	// mvn package to build
+	stage('BuildPackage')
+	{
+		steps
+		{
+			sh "mvn clean package"
+		}
+	}
+	//generate sonarqube report
+	stage('GenerateSonarQubeReport')
+	{
+		steps
+		{
+			sh "mvn sonar:sonar"
+		}
+	}
+	//upload artifacts into artifactory repos
+	stage('GenerateArtifactoryReport')
+	{
+		steps
+		{
+			sh "mvn deploy"
+		}
+	}
+	
+	//stage to deploy on tomcat server
+	stage('DeployAppIntoTomcat')
+	{
+		steps
+		{
+			sshagent(['f2f757ce-442b-4dc9-9db9-e5a8f8ca7c35']) 
+			{
+		         sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@3.110.197.240:/opt/apache-tomcat-9.0.59/webapps"
+			}
+		}
+	}
+		
+}
+}
+			
